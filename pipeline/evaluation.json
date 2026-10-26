@@ -1,14 +1,15 @@
 [
-  {"id": "TC-01", "verdict": "accept", "reason": "Cites CAT-1; all testIds exist in contract; expected result is concrete (non-empty name and $X.XX price format); steps are reproducible."},
-  {"id": "TC-02", "verdict": "accept", "reason": "Cites CART-1; all testIds exist; expected result is concrete (qty shows 10 and stays at 10 after extra increase); steps are reproducible."},
-  {"id": "TC-03", "verdict": "accept", "reason": "Cites PRICE-2; all testIds exist; expected result is concrete ($10.00 discount); arithmetic verified (10% of 10000 cents = 1000 cents)."},
-  {"id": "TC-04", "verdict": "accept", "reason": "Cites PRICE-3; all testIds exist; expected result is concrete ($7.99 shipping, $6.00 tax, $113.98 total); arithmetic verified (9999 + 799 + 600 = 11398 cents)."},
-  {"id": "TC-05", "verdict": "accept", "reason": "Cites PRICE-3; all testIds exist; expected result is concrete ($0.00 shipping, $106.00 total); arithmetic verified (10000 + 0 + 600 = 10600 cents)."},
-  {"id": "TC-06", "verdict": "accept", "reason": "Cites PRICE-4; all testIds exist; expected result is concrete ($5.40 tax); arithmetic verified (6% of 9000 cents = 540 cents)."},
-  {"id": "TC-07", "verdict": "accept", "reason": "Cites PRICE-5; all testIds exist; expected result is concrete ($103.39 total); arithmetic verified (10000 - 1000 + 799 + 540 = 10339 cents)."},
-  {"id": "TC-08", "verdict": "accept", "reason": "Cites PAY-2; all testIds exist; expected result is concrete ('Your card was declined.' exact message); steps are reproducible."},
-  {"id": "TC-09", "verdict": "accept", "reason": "Cites ORD-2; all testIds exist; expected result is concrete ('Payment received' status and matching total); steps are reproducible."},
-  {"id": "TC-10", "verdict": "accept", "reason": "Cites CRM-2; all testIds exist; expected result is concrete ('ACTIVE_CUSTOMER' status); steps are reproducible."},
-  {"id": "TC-11", "verdict": "accept", "reason": "Cites PAY-3; all testIds exist; expected result is concrete (exactly one crm-order-row); steps are reproducible."},
-  {"id": "TC-12", "verdict": "accept", "reason": "Cites WH-1; all testIds exist; endpoint URL explicitly stated (http://localhost:3000/api/webhooks/stripe); expected HTTP 400 and unchanged ledger state are exact; steps are reproducible."}
+  {"id":"TC-01","verdict":"accept","reason":"Cites CAT-1, uses valid test ids (catalog-phone-card, catalog-phone-name, catalog-phone-price), and expects checkable values: non-empty name text and price in $X.XX format."},
+  {"id":"TC-02","verdict":"accept","reason":"Cites CART-1, uses valid test ids, and expects a checkable boundary: quantity capped at 10 with no further increase on extra button clicks."},
+  {"id":"TC-03","verdict":"accept","reason":"Cites PRICE-2, uses valid test ids, and expects checkable values: coupon message and $10.00 discount (10% of $100.00 subtotal = 1000 cents)."},
+  {"id":"TC-04","verdict":"accept","reason":"Cites PRICE-3, uses valid test ids, and expects checkable amounts: $7.99 shipping, $6.00 tax (6% of $99.99 = 600 cents), $113.98 total."},
+  {"id":"TC-05","verdict":"accept","reason":"Cites PRICE-3, uses valid test ids, and expects checkable amounts: $0.00 shipping at $100.00 threshold, $6.00 tax, $106.00 total."},
+  {"id":"TC-06","verdict":"accept","reason":"Cites PRICE-4, uses valid test ids, and expects checkable tax value: $5.40 (6% of $90.00 discounted subtotal = 540 cents)."},
+  {"id":"TC-07","verdict":"accept","reason":"Cites PRICE-5, uses valid test ids, and expects checkable total: $103.39 (10000 − 1000 + 799 + 540 cents)."},
+  {"id":"TC-08","verdict":"accept","reason":"Cites PAY-2, uses valid test ids, and expects the exact quoted error message: 'Your card was declined.'"},
+  {"id":"TC-09","verdict":"accept","reason":"Cites ORD-2, uses valid test ids, and expects checkable values: 'Payment received' status and matching order total amount."},
+  {"id":"TC-10","verdict":"accept","reason":"Cites CRM-2, uses valid test ids, and expects checkable status: 'ACTIVE_CUSTOMER' after first PAID order."},
+  {"id":"TC-11","verdict":"accept","reason":"Cites PAY-3, uses valid test ids, and expects a checkable count: exactly one crm-order-row for the test email."},
+  {"id":"TC-12","verdict":"accept","reason":"Cites WH-1, uses valid test ids, and expects checkable results: HTTP 400 response and unchanged crm-event-row count."},
+  {"id":"TC-99","verdict":"reject","reason":"Cites no PRD rule (rule field is missing) and expected result 'It works' has nothing exact to check (not a specific status, amount, or message)."}
 ]

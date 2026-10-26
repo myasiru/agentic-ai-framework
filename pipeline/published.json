@@ -1,19 +1,80 @@
 {
   "publishLabel": "zs-74dee0",
-  "publishedAt": "2026-10-21T20:58:29Z",
+  "publishedAt": "2026-10-26T09:24:25.000Z",
   "cases": [
-    { "id": "TC-01", "title": "Catalog card displays product name and price", "zinctmKey": "ZTM-1", "labels": ["zs-74dee0", "tc-01", "cat-1"] },
-    { "id": "TC-02", "title": "Cart quantity can be increased to the maximum of 10 but not beyond", "zinctmKey": "ZTM-2", "labels": ["zs-74dee0", "tc-02", "cart-1"] },
-    { "id": "TC-03", "title": "Lowercase coupon 'agent10' applies a 10% discount (case-insensitive)", "zinctmKey": "ZTM-3", "labels": ["zs-74dee0", "tc-03", "price-2"] },
-    { "id": "TC-04", "title": "Subtotal $99.99 (just below threshold) charges $7.99 shipping", "zinctmKey": "ZTM-4", "labels": ["zs-74dee0", "tc-04", "price-3"] },
-    { "id": "TC-05", "title": "Subtotal $100.00 (at threshold) grants free shipping", "zinctmKey": "ZTM-5", "labels": ["zs-74dee0", "tc-05", "price-3"] },
-    { "id": "TC-06", "title": "Tax is 6% of the discounted subtotal (shipping excluded), rounded half up", "zinctmKey": "ZTM-6", "labels": ["zs-74dee0", "tc-06", "price-4"] },
-    { "id": "TC-07", "title": "Total equals subtotal minus discount plus shipping plus tax", "zinctmKey": "ZTM-7", "labels": ["zs-74dee0", "tc-07", "price-5"] },
-    { "id": "TC-08", "title": "Generic declined card shows the Stripe decline message", "zinctmKey": "ZTM-8", "labels": ["zs-74dee0", "tc-08", "pay-2"] },
-    { "id": "TC-09", "title": "Successful payment transitions the order to PAID and shows 'Payment received'", "zinctmKey": "ZTM-9", "labels": ["zs-74dee0", "tc-09", "ord-2"] },
-    { "id": "TC-10", "title": "First PAID order promotes a new customer from LEAD to ACTIVE_CUSTOMER", "zinctmKey": "ZTM-10", "labels": ["zs-74dee0", "tc-10", "crm-2"] },
-    { "id": "TC-12", "title": "Webhook with missing or invalid Stripe signature is rejected with HTTP 400 and changes no ledger state", "zinctmKey": "ZTM-11", "labels": ["zs-74dee0", "tc-12", "wh-1"] }
+    {
+      "id": "TC-01",
+      "title": "Catalog card displays product name and price",
+      "zinctmKey": "ZTM-12",
+      "labels": ["zs-74dee0", "tc-01", "CAT-1"]
+    },
+    {
+      "id": "TC-02",
+      "title": "Cart quantity can be increased to the maximum of 10 but not beyond",
+      "zinctmKey": "ZTM-13",
+      "labels": ["zs-74dee0", "tc-02", "CART-1"]
+    },
+    {
+      "id": "TC-03",
+      "title": "Lowercase coupon 'agent10' applies a 10% discount (case-insensitive)",
+      "zinctmKey": "ZTM-14",
+      "labels": ["zs-74dee0", "tc-03", "PRICE-2"]
+    },
+    {
+      "id": "TC-04",
+      "title": "Subtotal $99.99 (just below threshold) charges $7.99 shipping",
+      "zinctmKey": "ZTM-15",
+      "labels": ["zs-74dee0", "tc-04", "PRICE-3"]
+    },
+    {
+      "id": "TC-05",
+      "title": "Subtotal $100.00 (at threshold) grants free shipping",
+      "zinctmKey": "ZTM-16",
+      "labels": ["zs-74dee0", "tc-05", "PRICE-3"]
+    },
+    {
+      "id": "TC-06",
+      "title": "Tax is 6% of the discounted subtotal (shipping excluded), rounded half up",
+      "zinctmKey": "ZTM-17",
+      "labels": ["zs-74dee0", "tc-06", "PRICE-4"]
+    },
+    {
+      "id": "TC-07",
+      "title": "Total equals subtotal minus discount plus shipping plus tax",
+      "zinctmKey": "ZTM-18",
+      "labels": ["zs-74dee0", "tc-07", "PRICE-5"]
+    },
+    {
+      "id": "TC-08",
+      "title": "Generic declined card shows the Stripe decline message",
+      "zinctmKey": "ZTM-19",
+      "labels": ["zs-74dee0", "tc-08", "PAY-2"]
+    },
+    {
+      "id": "TC-09",
+      "title": "Successful payment transitions the order to PAID and shows 'Payment received'",
+      "zinctmKey": "ZTM-20",
+      "labels": ["zs-74dee0", "tc-09", "ORD-2"]
+    },
+    {
+      "id": "TC-10",
+      "title": "First PAID order promotes a new customer from LEAD to ACTIVE_CUSTOMER",
+      "zinctmKey": "ZTM-21",
+      "labels": ["zs-74dee0", "tc-10", "CRM-2"]
+    },
+    {
+      "id": "TC-11",
+      "title": "Pressing Pay multiple times creates exactly one order and one charge",
+      "zinctmKey": "ZTM-22",
+      "labels": ["zs-74dee0", "tc-11", "PAY-3"]
+    },
+    {
+      "id": "TC-12",
+      "title": "Webhook with missing or invalid Stripe signature is rejected with HTTP 400 and changes no ledger state",
+      "zinctmKey": "ZTM-23",
+      "labels": ["zs-74dee0", "tc-12", "WH-1"]
+    }
   ],
-  "excluded": ["TC-11"],
+  "excluded": ["TC-99"],
   "errors": []
 }

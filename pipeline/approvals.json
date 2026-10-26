@@ -1,6 +1,6 @@
 {
   "reviewer": "Mustafa Y Uslu",
-  "reviewedAt": "2026-10-21T20:53:22.357Z",
+  "reviewedAt": "2026-10-26T09:08:51.818Z",
   "publishLabel": "zs-74dee0",
   "decisions": [
     {
@@ -68,6 +68,17 @@
       "decision": "approve",
       "reason": "",
       "expected": "The webhook endpoint returns HTTP 400 and the number of crm-event-row rows on /crm is unchanged — no ledger state was modified."
+    },
+    {
+      "id": "TC-11",
+      "decision": "approve",
+      "reason": "",
+      "expected": "Exactly one crm-order-row exists for that email — multiple Pay clicks produce a single order and a single charge."
+    },
+    {
+      "id": "TC-99",
+      "decision": "reject",
+      "reason": "no expected result"
     }
   ]
 }

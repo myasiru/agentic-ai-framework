@@ -192,5 +192,17 @@
       "Reload /crm and count getByTestId('crm-event-row') rows again."
     ],
     "expected": "The webhook endpoint returns HTTP 400 and the number of crm-event-row rows on /crm is unchanged — no ledger state was modified."
+  },
+  {
+    "id": "TC-99",
+    "title": "Checkout feels fast",
+    "testType": "functional",
+    "priority": "P3",
+    "testIds": [],
+    "preconditions": "Store running",
+    "steps": [
+      "Check out a cart"
+    ],
+    "expected": "It works"
   }
 ]
