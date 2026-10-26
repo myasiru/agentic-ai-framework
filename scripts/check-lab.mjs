@@ -8,10 +8,8 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { agentDefinitions, agentSessions, allSubagentRuns, finalText, isWriteTool, mcpCalls, skillsLoaded } from './lib/agent-trace.mjs';
-import { LAB_AGENTS, P, caseProblems, caseRules, casesOf, defectsOf, jsonIn, readAgentJson, verdictsOf } from './lib/pipeline.mjs';
-import { L11_OUT, moneyIn, parseSpec, specFiles, unsafeReasons } from './lib/specs.mjs';
-import { healGate } from './heal-check.mjs';
+import { agentDefinitions, agentSessions, allSubagentRuns, costOf, isWriteTool, mcpCalls, money, skillsLoaded } from './lib/agent-trace.mjs';
+import { P, caseProblems, caseRules, casesOf, readAgentJson } from './lib/pipeline.mjs';
 import { zinctmSession } from './lib/zinctm.mjs';
 
 const lab = (process.argv[2] ?? '').toUpperCase();
@@ -335,143 +333,13 @@ async function l10() {
     check('every published case carries its PRD rule as a label', mine.length && mine.every((t) => (t.labels ?? []).some((l) => /^(cat|cart|price|pay|ord|crm|wh)-\d+$/i.test(l))));
   }
 
-  // Which model each agent declares, and how often the runtime recorded it running.
-  for (const d of defs.values()) if (d.model) console.log(`Agent ${d.name.padEnd(19)} model ${d.model.padEnd(32)} ${ranAs(d.name).length} run(s)`);
+  // What each agent cost, from the runtime's usage record (one model per agent, so a model row is an agent row).
+  const usage = {};
+  for (const s of agentSessions()) for (const [m, u] of Object.entries(s.usage?.models ?? {})) { const c = costOf(m, u); usage[m] = (usage[m] ?? 0) + (c.dollars ?? 0); }
+  for (const d of defs.values()) if (d.model) console.log(`Agent ${d.name.padEnd(19)} model ${d.model.padEnd(32)} ${ranAs(d.name).length} run(s)  ${money(usage[d.model] ?? 0)} so far (list price, npm run cost for detail)`);
 }
 
-// L11: automation and the planted defect. The run's own files (Playwright's report, the evidence it kept, runs.log),
-// the runtime's recordings of each agent, the healer gate and ZincTM decide; never an agent's summary.
-async function l11() {
-  const defs = new Map(agentDefinitions().map((a) => [a.name, a]));
-  const runs = allSubagentRuns();
-  const ranAs = (name) => runs.filter((r) => r.name === name);
-  const callsOf = (name) => ranAs(name).flatMap((r) => r.calls.filter((c) => c.ok));
-  const pathOf = (c) => String(c.args.file_path ?? c.args.absolute_path ?? c.args.path ?? '');
-
-  // 1. Four agents, each with only the tools its job needs.
-  const missingDefs = LAB_AGENTS.L11.filter((n) => !defs.get(n)?.model);
-  check('the four L11 agents are defined, each with a model', !missingDefs.length, missingDefs.length ? `missing: ${missingDefs.join(', ')}` : LAB_AGENTS.L11.map((n) => `${n}: ${defs.get(n).model}`).join('; '));
-  const writesOf = (n) => (defs.get(n)?.tools ?? []).filter(isWriteTool);
-  const dWrites = writesOf('defect-reporter');
-  check('the defect-reporter has exactly one tool that changes anything: tm_file_defect', dWrites.length === 1 && /tm_file_defect$/.test(dWrites[0]), dWrites.join(', ') || 'none');
-  const iWrites = writesOf('failure-investigator');
-  check('the failure-investigator is read-only by definition (it judges the evidence and cannot change it)', defs.get('failure-investigator') && !iWrites.length, iWrites.join(', ') || 'read tools only');
-  const hTools = defs.get('test-healer')?.tools ?? [];
-  check('the test-healer has no ZincTM tools and cannot create files', hTools.length && !hTools.some((t) => t.startsWith('mcp__') || t === 'write_file'), hTools.join(', '));
-
-  // 2. The specs: one per approved case, safe to run unreviewed, written and run by the automation-engineer.
-  const files = specFiles();
-  const specs = files.map(parseSpec);
-  const tests = specs.flatMap((s) => s.tests.map((x) => ({ ...x, file: s.file })));
-  const decisions = readAgentJson(P.approvals).data?.decisions ?? [];
-  const approved = new Set(decisions.filter((d) => d.decision === 'approve').map((d) => String(d.id).toUpperCase()));
-  const caseIds = [...new Set(tests.map((x) => x.caseId).filter((id) => id && approved.has(id)))];
-  check('at least 3 tests in tests/lab/L11, each named after an approved case', caseIds.length >= 3, `${tests.length} test(s), approved cases: ${caseIds.join(', ') || 'none'}`);
-  const unsafe = specs.flatMap((s) => unsafeReasons(s).map((r) => `${s.file}: ${r}`));
-  check('every spec imports only @playwright/test and leaves the machine alone', files.length && !unsafe.length, unsafe.join('; '));
-  const aCalls = callsOf('automation-engineer');
-  const wroteSpecs = aCalls.filter((c) => ['write_file', 'edit', 'replace'].includes(c.name) && /tests\/lab\/L11\//.test(pathOf(c)));
-  check('the automation-engineer wrote the specs (recording)', wroteSpecs.length > 0, `${wroteSpecs.length} write(s) in tests/lab/L11`);
-  check('the automation-engineer ran them with npm run spec (recording)', aCalls.some((c) => c.name === 'run_shell_command' && /npm run spec\b/.test(String(c.args.command ?? ''))));
-
-  // 3. The run: a planted bug caught, with evidence kept.
-  const log = read(`${L11_OUT}/runs.log`).split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-  const lastRunOf = (title) => [...log].reverse().find((r) => r.tests.some((x) => x.title === title));
-  const resultIn = (run, title) => run?.tests.find((x) => x.title === title);
-  const stale = files.filter((f) => { const r = [...log].reverse().find((x) => x.files.some((g) => g.endsWith(f.split('/').pop()))); return !r || Date.parse(r.at) < mtime(f) - 1000; });
-  check('your last npm run spec ran the specs as they are now', files.length && !stale.length, stale.length ? `changed since their last run: ${stale.join(', ')}` : `${log.length} run(s) in ${L11_OUT}/runs.log`);
-  const cents = (s) => { const m = moneyIn(s)[0]; return m ? Math.round(Number(m.slice(1)) * 100) : null; };
-  const planted = (x) => {
-    const e = cents(x.expected);
-    const r = cents(x.received);
-    if (e != null && r != null && r - e === 799) return 'B: free shipping at exactly $100.00 is charged anyway';
-    if (e != null && r != null && Math.abs(r - e) === 1) return 'A: the AGENT10 discount is cut instead of rounded';
-    if (/LEAD/.test(x.expected ?? '') && /ACTIVE_CUSTOMER/.test(x.received ?? '')) return 'C: a failed payment makes the customer active';
-    return null;
-  };
-  const caught = log.flatMap((r) => r.tests.filter((x) => x.kind === 'assertion' && planted(x)).map((x) => ({ ...x, at: r.at, bug: planted(x) })));
-  const first = caught[0];
-  check('a planted bug caught: a test reached the element and got the wrong value', first, first ? `${first.title.split(' ')[0]}: expected ${first.expected}, received ${first.received} -> planted bug ${first.bug}` : 'no assertion failure that matches bug A, B or C yet');
-  if (first) {
-    const ev = first.evidence ?? {};
-    check('its trace and screenshot were kept as evidence', ev.trace && existsSync(ev.trace) && ev.screenshot && existsSync(ev.screenshot), `${ev.trace ?? 'no trace'}; ${ev.screenshot ?? 'no screenshot'}`);
-  }
-
-  // 4. The investigation: product or test, decided from the evidence by a separate agent.
-  const inv = verdictsOf(readAgentJson(P.investigation).data);
-  const verdict = first && inv.find((x) => x.caseId === first.title.split(' ')[0].toUpperCase());
-  check('pipeline/investigation.json calls that failure a product bug and cites the rule', verdict && verdict.verdict === 'product' && /\b(CAT|CART|PRICE|PAY|ORD|CRM|WH)-\d+\b/.test(String(verdict.rule ?? '')), verdict ? `${verdict.verdict}, ${verdict.rule}` : 'no verdict for it');
-  // The investigator only reads, so the main session saved its answer. The saved verdicts must be the ones it returned.
-  const returned = ranAs('failure-investigator').map((r) => verdictsOf(jsonIn(finalText(r))));
-  const same = (a, b) => a.length === b.length && a.every((x) => b.some((y) => y.caseId === x.caseId && y.verdict === x.verdict));
-  check('pipeline/investigation.json holds exactly the verdicts the failure-investigator returned (recording)', inv.length && returned.some((r) => same(r, inv)), `${ranAs('failure-investigator').length} investigator run(s)`);
-
-  // 5. The defect, filed by the one agent allowed to, and ZincTM agrees.
-  const filed = defectsOf(readAgentJson(P.defects).data);
-  check('pipeline/defects.json lists the defect ZincTM created', filed.length > 0, filed.map((d) => d.key ?? d.defectId).join(', ') || 'none');
-  const dCalls = callsOf('defect-reporter');
-  check('the defect-reporter filed it with tm_file_defect, and changed nothing else (recording)', dCalls.some((c) => /tm_file_defect$/.test(c.name)) && !dCalls.some((c) => isWriteTool(c.name) && !/tm_file_defect$/.test(c.name)), `${dCalls.filter((c) => /tm_file_defect$/.test(c.name)).length} filed`);
-
-  // 6. The healer drill: red for a test reason, healed by the healer, assertions untouched.
-  const basePath = `${L11_OUT}/heal-baseline.json`;
-  const base = existsSync(basePath) ? JSON.parse(read(basePath)) : null;
-  check('you ran the drill (npm run drill)', base, base ? `${base.file}: ${base.from} -> ${base.to}` : `no ${basePath}`);
-  if (base) {
-    const drilled = Object.entries(base.tests).filter(([, v]) => v.file === base.file).map(([title]) => title);
-    const redAfter = log.some((r) => Date.parse(r.at) > Date.parse(base.at) && r.tests.some((x) => drilled.includes(x.title) && x.kind === 'locator'));
-    check('the drill turned a test red for a test reason (Kind: locator)', redAfter);
-    // Compare file names without case: macOS accepts TC-05.spec.ts for tc-05.spec.ts.
-    const healed = callsOf('test-healer').filter((c) => ['edit', 'replace', 'write_file'].includes(c.name) && pathOf(c).toLowerCase().endsWith(base.file.split('/').pop().toLowerCase()) && Date.parse(c.at) > Date.parse(base.at));
-    check('the test-healer repaired it (recording)', healed.length > 0, `${healed.length} edit(s) to ${base.file}`);
-    const now = drilled.map((title) => resultIn(lastRunOf(title), title));
-    check('the healed test passes again in your last run', now.length && now.every((x) => x?.status === 'passed'), now.map((x) => `${x?.title.split(' ')[0]}: ${x?.status ?? 'not run'}`).join(', '));
-  }
-  if (first) {
-    const latest = resultIn(lastRunOf(first.title), first.title);
-    check('the planted-bug test is still red in your last run, with the same expected value', latest?.kind === 'assertion' && latest.expected === first.expected, latest ? `${latest.status}, expected ${latest.expected ?? '-'}` : 'not run');
-  }
-  for (const g of healGate()) check(`gate: ${g.name}`, g.ok, g.detail);
-
-  // 7. ZincTM: specs linked to their cases, the defect labeled and linked, the cases unchanged since publishing.
-  const pub = new Map(casesOf(readAgentJson(P.published).data).map((x) => [String(x.id).toUpperCase(), x.zinctmId]));
-  const label = readAgentJson(P.approvals).data?.publishLabel;
-  const z = await zinctmSession();
-  check('ZincTM sign-in with your cydeo login', z.ok, z.ok ? '' : `${z.step}: ${z.why}`);
-  if (z.ok) {
-    const scripts = (await z.get('/api/scripts')).data?.scripts ?? [];
-    const unlinked = caseIds.filter((id) => !scripts.some((s) => s.testCaseId === pub.get(id) && /tests\/lab\/L11\//.test(s.filePath ?? '')));
-    const linked = caseIds.length - unlinked.length;
-    check('ZincTM links at least 3 automated cases to their specs (tm_link_script)', linked >= 3, `${linked} linked${unlinked.length ? `; not linked: ${unlinked.join(', ')}${unlinked.some((id) => !pub.get(id)) ? ' (no zinctmId in pipeline/published.json)' : ''}` : ''}`);
-    const defects = (await z.get('/api/defects')).data?.defects ?? [];
-    const mine = defects.filter((d) => filed.some((f) => f.defectId === d.id || f.key === d.key));
-    const d = mine[0];
-    check('ZincTM holds the defect, labeled with your run', d && (d.labels ?? []).map((l) => l.toLowerCase()).includes(String(label).toLowerCase()), d ? `${d.key}: ${d.title}` : 'not found in ZincTM');
-    if (d && first) {
-      const caseId = first.title.split(' ')[0].toUpperCase();
-      check('the defect is linked to the case whose test caught it', pub.get(caseId) ? d.testCaseId === pub.get(caseId) : false, pub.get(caseId) ? `${caseId} -> ${d.testCaseId ?? 'no link'}` : `${caseId} has no zinctmId in pipeline/published.json`);
-      check('the defect has expected vs actual with the values, and points to the trace and screenshot', moneyIn(d.expectedResult).length + moneyIn(d.actualResult).length >= 2 || (/LEAD/.test(d.expectedResult ?? '') && /ACTIVE_CUSTOMER/.test(d.actualResult ?? '')), `expected: ${d.expectedResult ?? '-'} | actual: ${d.actualResult ?? '-'}`);
-      check('the defect names the trace and the screenshot files', /trace\.zip/.test(`${d.description} ${d.stepsToReproduce}`) && /screenshot\.png/.test(`${d.description} ${d.stepsToReproduce}`));
-    }
-    const list = (await z.get('/api/test-cases')).data?.testCases ?? [];
-    const cases = new Map(casesOf(readAgentJson(P.cases).data).map((x) => [String(x.id).toUpperCase(), x]));
-    // A case may change after publishing only through the person: fixed by hand and approved again (npm run review).
-    const asApproved = new Map(decisions.filter((x) => x.decision === 'approve' && typeof x.expected === 'string').map((x) => [String(x.id).toUpperCase(), x.expected]));
-    const expectedOf = (id) => cases.get(id)?.expected ?? cases.get(id)?.expectedResult;
-    const drifted = caseIds.filter((id) => { const t = list.find((x) => x.id === pub.get(id)); return t && cases.get(id) && t.expectedResult !== expectedOf(id); });
-    const unreviewed = drifted.filter((id) => asApproved.get(id) !== expectedOf(id));
-    check('every automated case still says what ZincTM published, or you approved the change (nobody rewrote a case to match the app)', caseIds.length && !unreviewed.length,
-      unreviewed.length ? `changed without your approval: ${unreviewed.join(', ')}` : drifted.length ? `re-approved by you: ${drifted.join(', ')}; update them in ZincTM too, so the record matches` : '');
-  }
-
-  // 8. Each L11 agent ran on its declared model (the runtime's usage record is written when a session ends).
-  const l11Sessions = agentSessions().filter((s) => s.subagents.some((r) => LAB_AGENTS.L11.includes(r.name)));
-  const offModel = LAB_AGENTS.L11.filter((n) => defs.get(n)?.model && ranAs(n).length && !l11Sessions.some((s) => s.subagents.some((r) => r.name === n) && s.usage?.models?.[defs.get(n).model]));
-  check('each L11 agent ran on its declared model (usage record)', LAB_AGENTS.L11.every((n) => ranAs(n).length) && !offModel.length, LAB_AGENTS.L11.map((n) => `${n} ${ranAs(n).length} run(s)`).join(', ') + (offModel.length ? `; no usage on the declared model: ${offModel.join(', ')} (end each session with /quit)` : ''));
-  if (first) console.log(`Caught: planted bug ${first.bug}`);
-  for (const k of [...log].reverse().slice(0, 1)) console.log(`Last run ${k.at}: ${k.tests.filter((x) => x.status === 'passed').length} passed, ${k.tests.filter((x) => x.status !== 'passed').length} failed (${k.tests.map((x) => `${x.title.split(' ')[0]} ${x.status === 'passed' ? 'passed' : x.kind}`).join(', ')})`);
-}
-
-const LABS = { L00: l00, L01: l01, L02: l02, L03: l03, L04: l04, L05: l05, L06: l06, L07: l07, L10: l10, L11: l11 };
+const LABS = { L00: l00, L01: l01, L02: l02, L03: l03, L04: l04, L05: l05, L06: l06, L07: l07, L10: l10 };
 if (!LABS[lab]) {
   console.log(`Usage: npm run check:lab -- <${Object.keys(LABS).join('|')}>`);
   process.exit(2);

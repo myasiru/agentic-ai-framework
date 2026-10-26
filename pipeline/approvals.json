@@ -1,0 +1,73 @@
+{
+  "reviewer": "Mustafa Y Uslu",
+  "reviewedAt": "2026-10-21T20:53:22.357Z",
+  "publishLabel": "zs-74dee0",
+  "decisions": [
+    {
+      "id": "TC-01",
+      "decision": "approve",
+      "reason": "",
+      "expected": "catalog-phone-name shows non-empty product name text and catalog-phone-price shows a price formatted as $X.XX (e.g. $0.00 or higher), both visible on the card."
+    },
+    {
+      "id": "TC-02",
+      "decision": "approve",
+      "reason": "",
+      "expected": "After nine increases cart-phone-qty shows '10'. After the tenth increase attempt cart-phone-qty still shows '10' — quantity never exceeds 10."
+    },
+    {
+      "id": "TC-03",
+      "decision": "approve",
+      "reason": "",
+      "expected": "cart-coupon-message shows a success confirmation and cart-discount shows '$10.00', proving the code is accepted case-insensitively at the 10% rate."
+    },
+    {
+      "id": "TC-04",
+      "decision": "approve",
+      "reason": "",
+      "expected": "cart-shipping shows '$7.99', cart-tax shows '$6.00', and cart-total shows '$113.98'."
+    },
+    {
+      "id": "TC-05",
+      "decision": "approve",
+      "reason": "",
+      "expected": "cart-shipping shows '$0.00' and cart-total shows '$106.00'."
+    },
+    {
+      "id": "TC-06",
+      "decision": "approve",
+      "reason": "",
+      "expected": "cart-tax shows '$5.40'."
+    },
+    {
+      "id": "TC-07",
+      "decision": "approve",
+      "reason": "",
+      "expected": "cart-total shows '$103.39'."
+    },
+    {
+      "id": "TC-08",
+      "decision": "approve",
+      "reason": "",
+      "expected": "checkout-error-alert shows the exact text 'Your card was declined.'"
+    },
+    {
+      "id": "TC-09",
+      "decision": "approve",
+      "reason": "",
+      "expected": "order-status shows 'Payment received' and order-total shows the same dollar amount as the checkout total."
+    },
+    {
+      "id": "TC-10",
+      "decision": "approve",
+      "reason": "",
+      "expected": "The customer row matching 'e2e-promote-…@example.com' shows crm-customer-status as 'ACTIVE_CUSTOMER'."
+    },
+    {
+      "id": "TC-12",
+      "decision": "approve",
+      "reason": "",
+      "expected": "The webhook endpoint returns HTTP 400 and the number of crm-event-row rows on /crm is unchanged — no ledger state was modified."
+    }
+  ]
+}

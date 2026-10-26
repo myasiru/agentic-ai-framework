@@ -14,16 +14,7 @@ export const P = {
   approvals: 'pipeline/approvals.json',
   published: 'pipeline/published.json',
   cost: 'pipeline/cost.md',
-  investigation: 'pipeline/investigation.json',
-  defects: 'pipeline/defects.json',
 };
-
-/** The agents each lab adds. `npm run cost -- L11` prices only the sessions that ran one of them. */
-export const LAB_AGENTS = {
-  L10: ['context-researcher', 'test-plan-creator', 'test-case-creator', 'case-evaluator', 'publisher'],
-  L11: ['automation-engineer', 'failure-investigator', 'defect-reporter', 'test-healer'],
-};
-export const costPath = (lab) => (lab ? `pipeline/cost-${lab}.md` : P.cost);
 
 const read = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
 
@@ -46,37 +37,6 @@ export function readAgentJson(path) {
 }
 
 export const casesOf = (data) => (Array.isArray(data) ? data : Array.isArray(data?.cases) ? data.cases : []);
-
-/** The JSON inside an agent's answer: the whole text, a fenced block, or a [...] / {...} that follows its prose. */
-export function jsonIn(text) {
-  const s = String(text ?? '').trim();
-  const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/)?.[1];
-  for (const candidate of [s, fenced]) { if (!candidate) continue; try { return JSON.parse(candidate); } catch { /* keep looking */ } }
-  for (let i = 0; i < s.length; i++) {
-    if (s[i] !== '[' && s[i] !== '{') continue;
-    const close = s.lastIndexOf(s[i] === '[' ? ']' : '}');
-    if (close <= i) continue;
-    try { return JSON.parse(s.slice(i, close + 1)); } catch { /* next opening bracket */ }
-  }
-  return null;
-}
-
-/** The defects the reporter filed, whatever shape the model chose: [{ caseId, key, defectId }]. */
-export function defectsOf(data) {
-  const list = Array.isArray(data) ? data : Object.values(data ?? {}).find((v) => Array.isArray(v) && v.some((x) => x && typeof x === 'object')) ?? [];
-  return list.filter((d) => d && typeof d === 'object').map((d) => ({ ...d, caseId: String(d.caseId ?? d.case ?? String(d.title ?? '').match(/\bTC-\d+\b/i)?.[0] ?? '').toUpperCase(), key: d.key ?? d.defectKey ?? null, defectId: d.defectId ?? d.id ?? null }))
-    .filter((d) => d.key || d.defectId);
-}
-
-/** The investigator's verdicts, whatever shape the model chose: [{ caseId: 'TC-04', verdict: 'product' | 'test', ... }]. */
-export function verdictsOf(data) {
-  const list = Array.isArray(data) ? data : [data?.verdicts, data?.failures, data?.results, data?.cases].find(Array.isArray) ?? [];
-  return list.filter((v) => v && typeof v === 'object').map((v) => {
-    const id = v.caseId ?? v.case ?? String(v.test ?? '').match(/\bTC-\d+\b/i)?.[0] ?? String(v.spec ?? v.file ?? '').match(/\btc-\d+/i)?.[0] ?? '';
-    const said = String(v.verdict ?? '');
-    return { ...v, caseId: String(id).toUpperCase(), verdict: /product/i.test(said) ? 'product' : /test/i.test(said) ? 'test' : said };
-  });
-}
 export const caseRules = (c) => [...new Set(String(Array.isArray(c.rule) ? c.rule.join(' ') : c.rule ?? c.rules ?? '').match(RULE_RE) ?? [])];
 
 // An expected result you can check: an exact amount, a quoted message, a status the ledger uses, an HTTP code or a test id.

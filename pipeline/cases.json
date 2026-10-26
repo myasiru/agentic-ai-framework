@@ -1,0 +1,196 @@
+[
+  {
+    "id": "TC-01",
+    "title": "Catalog card displays product name and price",
+    "rule": "CAT-1",
+    "testType": "functional",
+    "priority": "P2",
+    "testIds": ["catalog-phone-card", "catalog-phone-name", "catalog-phone-price"],
+    "preconditions": "Store is running at http://localhost:3000 and the catalog page is loaded.",
+    "steps": [
+      "Navigate to /.",
+      "Locate the card for the 'phone' product via getByTestId('catalog-phone-card').",
+      "Read the text of getByTestId('catalog-phone-name') and getByTestId('catalog-phone-price')."
+    ],
+    "expected": "catalog-phone-name shows non-empty product name text and catalog-phone-price shows a price formatted as $X.XX (e.g. $0.00 or higher), both visible on the card."
+  },
+  {
+    "id": "TC-02",
+    "title": "Cart quantity can be increased to the maximum of 10 but not beyond",
+    "rule": "CART-1",
+    "testType": "boundary",
+    "priority": "P2",
+    "testIds": ["catalog-phone-add-button", "cart-phone-line", "cart-phone-increase-button", "cart-phone-qty"],
+    "preconditions": "Cart is empty.",
+    "steps": [
+      "On /, click getByTestId('catalog-phone-add-button') to add one 'phone' to the cart.",
+      "Navigate to /cart and confirm getByTestId('cart-phone-line') is visible with cart-phone-qty showing '1'.",
+      "Click getByTestId('cart-phone-increase-button') nine times to reach quantity 10.",
+      "Read getByTestId('cart-phone-qty').",
+      "Click getByTestId('cart-phone-increase-button') one more time and read cart-phone-qty again."
+    ],
+    "expected": "After nine increases cart-phone-qty shows '10'. After the tenth increase attempt cart-phone-qty still shows '10' — quantity never exceeds 10."
+  },
+  {
+    "id": "TC-03",
+    "title": "Lowercase coupon 'agent10' applies a 10% discount (case-insensitive)",
+    "rule": "PRICE-2",
+    "testType": "functional",
+    "priority": "P1",
+    "testIds": ["cart-subtotal", "cart-coupon-input", "cart-coupon-apply-button", "cart-coupon-message", "cart-discount"],
+    "preconditions": "Cart has items whose combined unit prices total exactly $100.00 (10000 cents).",
+    "steps": [
+      "Add products to the cart until getByTestId('cart-subtotal') displays '$100.00'.",
+      "Enter 'agent10' (all lowercase) into getByTestId('cart-coupon-input').",
+      "Click getByTestId('cart-coupon-apply-button').",
+      "Read getByTestId('cart-coupon-message') and getByTestId('cart-discount').",
+      "Arithmetic: discount = 10% of 10000 cents = 1000 cents = $10.00."
+    ],
+    "expected": "cart-coupon-message shows a success confirmation and cart-discount shows '$10.00', proving the code is accepted case-insensitively at the 10% rate."
+  },
+  {
+    "id": "TC-04",
+    "title": "Subtotal $99.99 (just below threshold) charges $7.99 shipping",
+    "rule": "PRICE-3",
+    "testType": "boundary",
+    "priority": "P1",
+    "testIds": ["cart-subtotal", "cart-shipping", "cart-tax", "cart-total"],
+    "preconditions": "Cart is empty; no coupon applied.",
+    "steps": [
+      "Add products until getByTestId('cart-subtotal') displays '$99.99' (9999 cents).",
+      "Read getByTestId('cart-shipping'), getByTestId('cart-tax'), and getByTestId('cart-total').",
+      "Arithmetic: shipping = $7.99 (799 cents) because 9999 < 10000. Tax = 6% of 9999 = 599.94 cents, rounded half up = 600 cents = $6.00. Total = 9999 + 799 + 600 = 11398 cents = $113.98."
+    ],
+    "expected": "cart-shipping shows '$7.99', cart-tax shows '$6.00', and cart-total shows '$113.98'."
+  },
+  {
+    "id": "TC-05",
+    "title": "Subtotal $100.00 (at threshold) grants free shipping",
+    "rule": "PRICE-3",
+    "testType": "boundary",
+    "priority": "P1",
+    "testIds": ["cart-subtotal", "cart-shipping", "cart-tax", "cart-total"],
+    "preconditions": "Cart is empty; no coupon applied.",
+    "steps": [
+      "Add products until getByTestId('cart-subtotal') displays '$100.00' (10000 cents).",
+      "Read getByTestId('cart-shipping'), getByTestId('cart-tax'), and getByTestId('cart-total').",
+      "Arithmetic: shipping = $0.00 because 10000 >= 10000. Tax = 6% of 10000 = 600 cents = $6.00. Total = 10000 + 0 + 600 = 10600 cents = $106.00."
+    ],
+    "expected": "cart-shipping shows '$0.00' and cart-total shows '$106.00'."
+  },
+  {
+    "id": "TC-06",
+    "title": "Tax is 6% of the discounted subtotal (shipping excluded), rounded half up",
+    "rule": "PRICE-4",
+    "testType": "functional",
+    "priority": "P1",
+    "testIds": ["cart-subtotal", "cart-coupon-input", "cart-coupon-apply-button", "cart-discount", "cart-tax"],
+    "preconditions": "Cart subtotal is exactly $100.00 (10000 cents).",
+    "steps": [
+      "Add products until getByTestId('cart-subtotal') displays '$100.00'.",
+      "Enter 'AGENT10' into getByTestId('cart-coupon-input') and click getByTestId('cart-coupon-apply-button').",
+      "Confirm getByTestId('cart-discount') shows '$10.00' (discounted subtotal = 9000 cents = $90.00).",
+      "Read getByTestId('cart-tax').",
+      "Arithmetic: tax = 6% of 9000 = 540 cents = $5.40. Shipping is not taxed."
+    ],
+    "expected": "cart-tax shows '$5.40'."
+  },
+  {
+    "id": "TC-07",
+    "title": "Total equals subtotal minus discount plus shipping plus tax",
+    "rule": "PRICE-5",
+    "testType": "functional",
+    "priority": "P1",
+    "testIds": ["cart-subtotal", "cart-coupon-input", "cart-coupon-apply-button", "cart-discount", "cart-shipping", "cart-tax", "cart-total"],
+    "preconditions": "Cart subtotal is exactly $100.00 (10000 cents).",
+    "steps": [
+      "Add products until getByTestId('cart-subtotal') displays '$100.00'.",
+      "Apply coupon 'AGENT10' via getByTestId('cart-coupon-apply-button').",
+      "Read cart-discount ('$10.00'), cart-shipping, cart-tax, and cart-total.",
+      "Arithmetic: subtotal 10000 − discount 1000 + shipping 799 (discounted subtotal $90.00 < $100) + tax 540 (6% of 9000) = 10339 cents = $103.39."
+    ],
+    "expected": "cart-total shows '$103.39'."
+  },
+  {
+    "id": "TC-08",
+    "title": "Generic declined card shows the Stripe decline message",
+    "rule": "PAY-2",
+    "testType": "negative",
+    "priority": "P1",
+    "testIds": ["checkout-name-input", "checkout-email-input", "checkout-card-declined", "checkout-pay-button", "checkout-error-alert"],
+    "preconditions": "Cart has at least one item and the user is on /checkout.",
+    "steps": [
+      "Enter a name into getByTestId('checkout-name-input').",
+      "Enter 'e2e-decline-<timestamp>@example.com' into getByTestId('checkout-email-input').",
+      "Select the generic decline card by clicking getByTestId('checkout-card-declined').",
+      "Click getByTestId('checkout-pay-button').",
+      "Read getByTestId('checkout-error-alert')."
+    ],
+    "expected": "checkout-error-alert shows the exact text 'Your card was declined.'"
+  },
+  {
+    "id": "TC-09",
+    "title": "Successful payment transitions the order to PAID and shows 'Payment received'",
+    "rule": "ORD-2",
+    "testType": "e2e",
+    "priority": "P1",
+    "testIds": ["checkout-name-input", "checkout-email-input", "checkout-card-visa", "checkout-pay-button", "order-status", "order-total"],
+    "preconditions": "Cart has at least one item; user is on /checkout with a known total T (cart-total / checkout-total).",
+    "steps": [
+      "Enter a name into getByTestId('checkout-name-input').",
+      "Enter 'e2e-paid-<timestamp>@example.com' into getByTestId('checkout-email-input').",
+      "Select the success card by clicking getByTestId('checkout-card-visa').",
+      "Click getByTestId('checkout-pay-button') and wait for navigation to /orders/<order id>.",
+      "Read getByTestId('order-status') and getByTestId('order-total')."
+    ],
+    "expected": "order-status shows 'Payment received' and order-total shows the same dollar amount as the checkout total."
+  },
+  {
+    "id": "TC-10",
+    "title": "First PAID order promotes a new customer from LEAD to ACTIVE_CUSTOMER",
+    "rule": "CRM-2",
+    "testType": "e2e",
+    "priority": "P1",
+    "testIds": ["checkout-name-input", "checkout-email-input", "checkout-card-visa", "checkout-pay-button", "crm-customer-row", "crm-customer-email", "crm-customer-status"],
+    "preconditions": "The email used has never placed an order before.",
+    "steps": [
+      "Complete a successful checkout using 'e2e-promote-<timestamp>@example.com' and getByTestId('checkout-card-visa').",
+      "Navigate to /crm.",
+      "Filter getByTestId('crm-customer-row') by the email text and read getByTestId('crm-customer-status') for that row."
+    ],
+    "expected": "The customer row matching 'e2e-promote-…@example.com' shows crm-customer-status as 'ACTIVE_CUSTOMER'."
+  },
+  {
+    "id": "TC-11",
+    "title": "Pressing Pay multiple times creates exactly one order and one charge",
+    "rule": "PAY-3",
+    "testType": "functional",
+    "priority": "P1",
+    "testIds": ["checkout-name-input", "checkout-email-input", "checkout-card-visa", "checkout-pay-button", "crm-order-row", "crm-customer-email"],
+    "preconditions": "Cart has at least one item; user is on /checkout.",
+    "steps": [
+      "Enter 'e2e-idempotent-<timestamp>@example.com' into getByTestId('checkout-email-input') and a name into checkout-name-input.",
+      "Select getByTestId('checkout-card-visa').",
+      "Rapidly click getByTestId('checkout-pay-button') three or more times before navigation completes.",
+      "Wait for the order confirmation page to appear, then navigate to /crm.",
+      "Count getByTestId('crm-order-row') rows whose crm-customer-email matches the e2e email used."
+    ],
+    "expected": "Exactly one crm-order-row exists for that email — multiple Pay clicks produce a single order and a single charge."
+  },
+  {
+    "id": "TC-12",
+    "title": "Webhook with missing or invalid Stripe signature is rejected with HTTP 400 and changes no ledger state",
+    "rule": "WH-1",
+    "testType": "api",
+    "priority": "P1",
+    "testIds": ["crm-events-table", "crm-event-row"],
+    "preconditions": "Note the current count of rows in getByTestId('crm-events-table') on /crm.",
+    "steps": [
+      "Record the current number of getByTestId('crm-event-row') rows on /crm.",
+      "POST a Stripe webhook event payload (e.g. payment_intent.succeeded) to http://localhost:3000/api/webhooks/stripe with a missing or invalid Stripe-Signature header.",
+      "Observe the HTTP response status.",
+      "Reload /crm and count getByTestId('crm-event-row') rows again."
+    ],
+    "expected": "The webhook endpoint returns HTTP 400 and the number of crm-event-row rows on /crm is unchanged — no ledger state was modified."
+  }
+]
