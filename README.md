@@ -1,4 +1,3 @@
-test commit
 # CYDEO Agentic QA · Zinc Store lab
 
 A real distributed checkout that **you own**: a storefront, **your own Stripe sandbox**, and a CRM ledger, all running in your Codespace. You will make AI agents test it, and you will prove what they claim.
